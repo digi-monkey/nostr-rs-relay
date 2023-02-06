@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        os: [macOS-latest, ubuntu-20.04]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Rust
+      uses: actions/setup-rust@v1
+      with:
+        rust-version: stable
+
+    - name: Build with Cargo
+      run: |
+        cargo build --release
+
+    - name: Upload binary to Github Releases
+      if: success()
+      uses: actions/upload-artifact@v2
+      with:
+        name: binary-${{ env.GITHUB_REF }}.tar.gz
+        path: target/release/
+
+    - name: Publish to Github Releases
+      if: success()
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.GITHUB_REF }}
+        release_name: Release ${{ env.GITHUB_REF }}
+        draft: false
+        prerelease: false
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        artifacts: binary-${{ env.GITHUB_REF }}.tar.gz
